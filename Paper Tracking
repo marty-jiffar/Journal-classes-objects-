@@ -1,0 +1,264 @@
+'''
+Paper tracking
+
+Marty Jiffar
+'''
+
+class Review:
+    ''' Class for representing reviews '''
+    def __init__(self, paper, reviewer_name, score, comments):
+        self.paper = paper
+        self.reviewer_name = reviewer_name
+        self.score = score
+        self.comments = comments
+
+    def get_reviewer_name(self):
+        return self.reviewer_name
+
+    def get_score(self):
+        return self.score
+
+    def get_comments(self):
+        return self.comments
+
+class Reviewer:
+
+    def __init__(self, name, affil, areas):
+        self.name = name
+        self.affil = affil
+        self.areas = areas
+
+    def good_match(self, paper):
+        if len(self.areas) > 1:
+            for area in self.areas:
+                if area in paper.areas:
+                    return True
+            return False
+        else:
+            if self.areas[0] in paper.areas:
+                return True
+        return False
+
+    def remove_area(self, old_area):
+        self.areas.remove(old_area)
+
+    def add_area(self, new_area):
+        self.areas.append(new_area)
+
+class Paper:
+    ''' Class for representing papers '''
+    def __init__(self, title, authors, areas):
+        self.title = title
+        self.authors = authors[:]
+        self.areas = set(areas)
+        self.reviews = []
+
+    def add_review(self, reviewer_name, score, comments):
+        '''
+        Creates a Review object and adds it to the list of reviews
+        '''
+
+        # Adjust score if necessary
+        if score < 0:
+            score = 0
+        elif score > 5:
+            score = 5
+
+        r = Review(self, reviewer_name, score, comments)
+        self.reviews.append(r)
+
+    def get_avg_score(self):
+        '''
+        Gets review score of paper
+        '''
+
+        score_sum = 0
+        review_count = 0
+        for review in self.reviews:
+            score_sum += review.score
+            review_count += 1
+
+        if review_count == 0:
+            return 0
+
+        return score_sum / review_count
+
+class Journal:
+    ''' Class for representing journals '''
+    def __init__(self, name):
+        self.name = name
+        self.papers = set()
+
+    def add_paper(self, paper):
+        '''
+        Adds a paper to the journal.  Return false if the Paper object
+        was already added.  Return true if the Paper was added
+        successfully.
+        '''
+        if paper in self.papers:
+            return False
+
+        self.papers.add(paper)
+        return True
+
+    def add_review(self, paper, reviewerName, score, comments):
+        '''
+        Adds a review to a paper in the journal.
+        Return false if the Paper object is not part of the journal.
+        Return true if the review was added successfully.
+        '''
+
+        if paper not in self.papers:
+            return False
+
+        paper.add_review(reviewerName, score, comments)
+        return True
+
+    def get_papers_above(self, score):
+        '''
+        Returns a List of Paper objects with an average review score
+        greater than or equal to the provided "score" parameter
+        '''
+
+        papers_above = []
+
+        for paper in self.papers:
+            if paper.get_avg_score() >= score:
+                papers_above.append(paper)
+
+        return papers_above
+
+
+def test_1():
+    ''' Test code '''
+
+    j = Journal("Journal of Computer Science Applications")
+
+    p1 = Paper("A Trie-based Method for Word Autocompletion",
+               ["Susan Calvin", "Grace Kingston-Hughes"],
+               ["Data Structures", "Text Processing"])
+
+    p2 = Paper("A Novel Approach to Linear Regression",
+               ["Jane Smith"],
+               ["Statistics"])
+
+    p3 = Paper("Thanks Obama: An Application for Analyzing ACA Data",
+               ["Joanna Lovelace", "Sandy Hopper"],
+               ["Visualization", "Healthcare"])
+
+    p4 = Paper("A New Algorithm for Finding Crossing Orders",
+               ["Diana Liskov", "Ada Lynch"],
+               ["Data Structures", "Finance"])
+
+    rv = j.add_paper(p1)
+    assert rv, "Failed add of paper p1"
+
+    rv = j.add_paper(p2)
+    assert rv, "Failed add of paper p2"
+
+    rv = j.add_paper(p3)
+    assert rv, "Failed add of paper p3"
+
+    rv = j.add_paper(p4)
+    assert rv, "Failed add of paper p4"
+
+    rv = j.add_paper(p1)
+    assert not rv, "Failed duplicated add of paper p1"
+
+    rv = j.add_review(p1, "REVIEWER 1", 4, "Excellent!")
+    assert rv, "Failed add of review 1 for p1"
+
+    rv = j.add_review(p1, "REVIEWER 2", 5, "Tres magnifique!")
+    assert rv, "Failed add of review 2 for p1"
+
+    rv = j.add_review(p1, "REVIEWER 3", 4, "Quite an achievement!")
+    assert rv, "Failed add of review 3 for p1"
+
+    rv = j.add_review(p2, "REVIEWER 4", 3, "Needs improvement")
+    assert rv, "Failed add of review 4 for p1"
+
+    rv = j.add_review(p2, "REVIEWER 1", 4, "Quite good")
+    assert rv, "Failed add of review 1 for p2"
+
+    rv = j.add_review(p2, "REVIEWER 2", 3, "I've seen worse")
+    assert rv, "Failed add of review 2 for p2"
+
+    rv = j.add_review(p3, "REVIEWER 3", 2, "Reject!")
+    assert rv, "Failed add of review 3 for p3"
+
+    rv = j.add_review(p3, "REVIEWER 4", 1, "Intolerable!")
+    assert rv, "Failed add of review 4 for p3"
+
+    rv = j.add_review(p3, "REVIEWER 1", 1, "Did not cite my paper!")
+    assert rv, "Failed add of review 1 for p3"
+
+    rv = j.get_papers_above(3.0)
+    msg = "Failed getting papers above 3.0. Expected: 2  Got: {}.".format(len(rv))
+    assert len(rv) == 2, msg
+    msg = "Failed getting papers above 3.0. Missing: A Novel Approach to Linear Regression"
+    assert p2 in rv, msg
+    msg = "Failed getting papers above 3.0. Missing: A Trie-based Method for Word Autocompletion"
+    assert p1 in rv, msg
+
+    rv = j.get_papers_above(4.0)
+    msg = "Failed getting papers above 4.0. Expected: 1  Got: {}.".format(len(rv))
+    assert len(rv) == 1, msg
+    msg = "Failed getting papers above 4.0. Missing: A Trie-based Method for Word Autocompletion"
+    assert p1 in rv, msg
+
+def test_2():
+    ''' Test code '''
+
+    journ = Journal("The Social Science Journal")
+
+    prof1 = Reviewer("Donald", "UChicago", ["statistics", "philosophy"])
+
+    prof2 = Reviewer("Susan", "UIC", ["spanish"])
+
+    prof3 = Reviewer("Harold", "Depaul", ["history", "public policy", "sociology"])
+
+    paper1 = Paper("statistics: let's talk", "A. Statty Dude", ["statistics"])
+
+    paper2 = Paper("spanish! yay", "Spa N. Ishspeaker", ["spanish", "public policy"])
+
+    paper3 = Paper("history but not really", "Phil O. Sophy", ["philosophy", "spanish"])
+
+    paper1.add_review(prof1.name, 4, "this was well written but bad content")
+
+    paper2.add_review(prof2.name, 2, "this was good content but poorly written")
+
+    paper3.add_review(prof3.name, 3, "this was mediocre in every way")
+
+    match_1 = prof1.good_match(paper1)
+    msg = "Failed in matching prof 1 with paper 1"
+    assert match_1, msg
+
+    match_2 = prof2.good_match(paper2)
+    msg = "Failed in matching prof 2 with paper 2"
+    assert match_2, msg
+
+    match_3 = prof3.good_match(paper3)
+    msg = "Fail: matched prof 3 with paper 3"
+    assert not match_3, msg
+
+    prof3.add_area("philosophy")
+
+    prof1.add_area("spanish")
+
+    prof1.remove_area("statistics")
+
+    match_5 = prof1.good_match(paper1)
+    msg = "Fail: matched new prof 1 with paper 1"
+    assert not match_5, msg
+
+    match_6 = prof3.good_match(paper3)
+    msg = "Failed in matching new prof 3 with paper 3"
+    assert match_6, msg
+
+    match_7 = prof1.good_match(paper3)
+    msg = "Failed in matching new prof 1 with paper 3"
+    assert match_7, msg
+
+if __name__ == "__main__":
+    test_1()
+    test_2()
